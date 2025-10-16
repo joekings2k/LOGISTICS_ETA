@@ -15,7 +15,7 @@ import (
 func createRandomVehicle(t *testing.T, user User) Vehicle {
 
 	user.Role = string(util.RoleDriver)
-	arg := createVehicleParams{
+	arg := CreateVehicleParams{
 		ID: 				uuid.New(),
 		DriverID: 	user.ID,
 		LicensePlate: util.RandomString(10),
@@ -24,7 +24,7 @@ func createRandomVehicle(t *testing.T, user User) Vehicle {
 		Capacity: sql.NullInt32{Int32: int32(util.RandomInt(1,100)), Valid: true},
 	}
 
-	vehicle, err := testQueries.createVehicle(context.Background(), arg)
+	vehicle, err := testQueries.CreateVehicle(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicle)
 
@@ -51,7 +51,7 @@ func TestGetVehicleByID(t *testing.T) {
 	user := createRandomUser(t)
 	vehicle1 := createRandomVehicle(t, user)
 
-	vehicle2, err := testQueries.getVehicleByID(context.Background(), vehicle1.ID)
+	vehicle2, err := testQueries.GetVehicleByID(context.Background(), vehicle1.ID)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicle2)
 
@@ -71,7 +71,7 @@ func TestGetVehicleByLicencePlate(t *testing.T) {
 	user := createRandomUser(t)
 	vehicle1 := createRandomVehicle(t, user)
 
-	vehicle2, err := testQueries.getVehicleByLicensePlate(context.Background(), vehicle1.LicensePlate)
+	vehicle2, err := testQueries.GetVehicleByLicensePlate(context.Background(), vehicle1.LicensePlate)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicle2)
 
@@ -95,12 +95,12 @@ func TestGetVehiclesByDriverID(t *testing.T) {
 	for i := 0; i < n; i++ {
 		createRandomVehicle(t, user)
 	}
-	arg := getVehiclesByDriverIDParams{
+	arg := GetVehiclesByDriverIDParams{
 		DriverID: user.ID,
 		Limit: 3,
 		Offset: 0,
 	}
-	vehicles, err := testQueries.getVehiclesByDriverID(context.Background(), arg)
+	vehicles, err := testQueries.GetVehiclesByDriverID(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicles)
 	require.Len(t, vehicles, int(arg.Limit))
@@ -111,12 +111,12 @@ func TestGetVehiclesByDriverID(t *testing.T) {
 
 	}
 
-	arg = getVehiclesByDriverIDParams{
+	arg = GetVehiclesByDriverIDParams{
 		DriverID: uuid.New(),
 		Limit: 3,
 		Offset: 0,
 	}
-	vehicles, err = testQueries.getVehiclesByDriverID(context.Background(), arg)
+	vehicles, err = testQueries.GetVehiclesByDriverID(context.Background(), arg)
 	require.NoError(t, err)
 	require.Equal(t, len(vehicles), 0)
 
@@ -126,14 +126,14 @@ func TestUpdateVehicel(t *testing.T) {
 	user := createRandomUser(t)
 	vehicle1 := createRandomVehicle(t, user)
 
-	arg := updateVehicleParams{
+	arg := UpdateVehicleParams{
 		ID: vehicle1.ID,
 		Model: sql.NullString{String: util.RandomString(6), Valid: true},
 		ImageUrl: sql.NullString{String: util.RandomString(6), Valid: true},
 		Capacity: sql.NullInt32{Int32: int32(util.RandomInt(1,100)), Valid: true},
 	}
 
-	vehicle2, err := testQueries.updateVehicle(context.Background(), arg)
+	vehicle2, err := testQueries.UpdateVehicle(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicle2)
 	
@@ -153,12 +153,12 @@ func TestUpdateVehiclePartial(t *testing.T) {
 	user := createRandomUser(t)
 	vehicle1 := createRandomVehicle(t, user)
 	
-	arg := updateVehicleParams{
+	arg := UpdateVehicleParams{
 		ID: vehicle1.ID,
 		Model: sql.NullString{String: util.RandomString(6), Valid: true},
 	}
 
-	vehicle2, err := testQueries.updateVehicle(context.Background(), arg)
+	vehicle2, err := testQueries.UpdateVehicle(context.Background(), arg)
 	require.NoError(t, err)
 	require.NotEmpty(t, vehicle2)
 	
@@ -173,10 +173,10 @@ func TestUpdateVehiclePartial(t *testing.T) {
 func TestDeletevehicle(t *testing.T) {
 	Vehicle1 := createRandomVehicle(t, createRandomUser(t))
 
-	err := testQueries.deleteVehicle(context.Background(), Vehicle1.ID)
+	err := testQueries.DeleteVehicle(context.Background(), Vehicle1.ID)
 	require.NoError(t, err)
 
-	vehicle2, err := testQueries.getVehicleByID(context.Background(), Vehicle1.ID)
+	vehicle2, err := testQueries.GetVehicleByID(context.Background(), Vehicle1.ID)
 
 	require.Error(t, err)
 	require.EqualError(t, err, sql.ErrNoRows.Error())

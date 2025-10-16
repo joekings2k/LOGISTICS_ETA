@@ -178,21 +178,28 @@ func (q *Queries) GetRoutesByDriverID(ctx context.Context, arg GetRoutesByDriver
 	return items, nil
 }
 
-const listRoutes = `-- name: ListRoutes :many
+const listRoutesByDriverAndStatus = `-- name: ListRoutesByDriverAndStatus :many
 SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at FROM routes
-WHERE status = $1
+WHERE driver_id= $1
+AND status = $2
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3
+LIMIT $3 OFFSET $4
 `
 
-type ListRoutesParams struct {
-	Status string `json:"status"`
-	Limit  int32  `json:"limit"`
-	Offset int32  `json:"offset"`
+type ListRoutesByDriverAndStatusParams struct {
+	DriverID uuid.UUID `json:"driver_id"`
+	Status   string    `json:"status"`
+	Limit    int32     `json:"limit"`
+	Offset   int32     `json:"offset"`
 }
 
-func (q *Queries) ListRoutes(ctx context.Context, arg ListRoutesParams) ([]Route, error) {
-	rows, err := q.db.QueryContext(ctx, listRoutes, arg.Status, arg.Limit, arg.Offset)
+func (q *Queries) ListRoutesByDriverAndStatus(ctx context.Context, arg ListRoutesByDriverAndStatusParams) ([]Route, error) {
+	rows, err := q.db.QueryContext(ctx, listRoutesByDriverAndStatus,
+		arg.DriverID,
+		arg.Status,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -230,21 +237,21 @@ func (q *Queries) ListRoutes(ctx context.Context, arg ListRoutesParams) ([]Route
 	return items, nil
 }
 
-const updateRouteStatus = `-- name: UpdateRouteStatus :one
+const updateRouteActualDuration = `-- name: UpdateRouteActualDuration :one
 UPDATE routes
-SET status = COALESCE(NULLIF($2, ''), status),
+SET actual_duration_min = $2,
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at
 `
 
-type UpdateRouteStatusParams struct {
-	ID      uuid.UUID   `json:"id"`
-	Column2 interface{} `json:"column_2"`
+type UpdateRouteActualDurationParams struct {
+	ID                uuid.UUID       `json:"id"`
+	ActualDurationMin sql.NullFloat64 `json:"actual_duration_min"`
 }
 
-func (q *Queries) UpdateRouteStatus(ctx context.Context, arg UpdateRouteStatusParams) (Route, error) {
-	row := q.db.QueryRowContext(ctx, updateRouteStatus, arg.ID, arg.Column2)
+func (q *Queries) UpdateRouteActualDuration(ctx context.Context, arg UpdateRouteActualDurationParams) (Route, error) {
+	row := q.db.QueryRowContext(ctx, updateRouteActualDuration, arg.ID, arg.ActualDurationMin)
 	var i Route
 	err := row.Scan(
 		&i.ID,
@@ -266,21 +273,21 @@ func (q *Queries) UpdateRouteStatus(ctx context.Context, arg UpdateRouteStatusPa
 	return i, err
 }
 
-const updateRouteActualDuration = `-- name: updateRouteActualDuration :one
+const updateRouteStatus = `-- name: UpdateRouteStatus :one
 UPDATE routes
-SET actual_duration_min = $2,
+SET status = COALESCE($2, status),
     updated_at = NOW()
 WHERE id = $1
 RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at
 `
 
-type updateRouteActualDurationParams struct {
-	ID                uuid.UUID       `json:"id"`
-	ActualDurationMin sql.NullFloat64 `json:"actual_duration_min"`
+type UpdateRouteStatusParams struct {
+	ID     uuid.UUID `json:"id"`
+	Status string    `json:"status"`
 }
 
-func (q *Queries) updateRouteActualDuration(ctx context.Context, arg updateRouteActualDurationParams) (Route, error) {
-	row := q.db.QueryRowContext(ctx, updateRouteActualDuration, arg.ID, arg.ActualDurationMin)
+func (q *Queries) UpdateRouteStatus(ctx context.Context, arg UpdateRouteStatusParams) (Route, error) {
+	row := q.db.QueryRowContext(ctx, updateRouteStatus, arg.ID, arg.Status)
 	var i Route
 	err := row.Scan(
 		&i.ID,

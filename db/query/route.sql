@@ -33,12 +33,12 @@ LIMIT $2 OFFSET $3;
 
 -- name: UpdateRouteStatus :one
 UPDATE routes
-SET status = COALESCE(NULLIF($2, ''), status),
+SET status = COALESCE($2, status),
     updated_at = NOW()
 WHERE id = $1
 RETURNING *;
 
--- name: updateRouteActualDuration :one
+-- name: UpdateRouteActualDuration :one
 UPDATE routes
 SET actual_duration_min = $2,
     updated_at = NOW()
@@ -49,10 +49,11 @@ RETURNING *; -- when the route is completed
 -- name: DeleteRoute :exec
 DELETE FROM routes WHERE id = $1;
 
--- name: ListRoutes :many
+-- name: ListRoutesByDriverAndStatus :many
 SELECT * FROM routes
-WHERE status = $1
+WHERE driver_id= $1
+AND status = $2
 ORDER BY created_at DESC
-LIMIT $2 OFFSET $3;
+LIMIT $3 OFFSET $4;
 
 

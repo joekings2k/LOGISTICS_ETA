@@ -1,18 +1,18 @@
--- name: createVehicle :one
+-- name: CreateVehicle :one
 INSERT INTO vehicles (id, driver_id, license_plate, model, image_url, capacity)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING *; -- returns the created vehicle
 
--- name: getVehicleByID :one
+-- name: GetVehicleByID :one
 SELECT * FROM vehicles WHERE id = $1;
 
--- name: getVehiclesByDriverID :many
+-- name: GetVehiclesByDriverID :many
 SELECT * FROM vehicles WHERE driver_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3;
 
--- name: getVehicleByLicensePlate :one
+-- name: GetVehicleByLicensePlate :one
 SELECT * FROM vehicles WHERE license_plate = $1;
 
--- name: updateVehicle :one
+-- name: UpdateVehicle :one
 UPDATE vehicles
 SET 
     model = COALESCE($2, model),
@@ -23,5 +23,5 @@ WHERE id = $1
 RETURNING *;
 
 
--- name: deleteVehicle :exec
+-- name: DeleteVehicle :exec
 DELETE FROM vehicles WHERE id = $1;

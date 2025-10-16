@@ -12,13 +12,13 @@ import (
 	"github.com/google/uuid"
 )
 
-const createVehicle = `-- name: createVehicle :one
+const createVehicle = `-- name: CreateVehicle :one
 INSERT INTO vehicles (id, driver_id, license_plate, model, image_url, capacity)
 VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, driver_id, license_plate, model, image_url, capacity, created_at, updated_at
 `
 
-type createVehicleParams struct {
+type CreateVehicleParams struct {
 	ID           uuid.UUID      `json:"id"`
 	DriverID     uuid.UUID      `json:"driver_id"`
 	LicensePlate string         `json:"license_plate"`
@@ -27,7 +27,7 @@ type createVehicleParams struct {
 	Capacity     sql.NullInt32  `json:"capacity"`
 }
 
-func (q *Queries) createVehicle(ctx context.Context, arg createVehicleParams) (Vehicle, error) {
+func (q *Queries) CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error) {
 	row := q.db.QueryRowContext(ctx, createVehicle,
 		arg.ID,
 		arg.DriverID,
@@ -50,22 +50,22 @@ func (q *Queries) createVehicle(ctx context.Context, arg createVehicleParams) (V
 	return i, err
 }
 
-const deleteVehicle = `-- name: deleteVehicle :exec
+const deleteVehicle = `-- name: DeleteVehicle :exec
 DELETE FROM vehicles WHERE id = $1
 `
 
-func (q *Queries) deleteVehicle(ctx context.Context, id uuid.UUID) error {
+func (q *Queries) DeleteVehicle(ctx context.Context, id uuid.UUID) error {
 	_, err := q.db.ExecContext(ctx, deleteVehicle, id)
 	return err
 }
 
-const getVehicleByID = `-- name: getVehicleByID :one
+const getVehicleByID = `-- name: GetVehicleByID :one
 
 SELECT id, driver_id, license_plate, model, image_url, capacity, created_at, updated_at FROM vehicles WHERE id = $1
 `
 
 // returns the created vehicle
-func (q *Queries) getVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, error) {
+func (q *Queries) GetVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, error) {
 	row := q.db.QueryRowContext(ctx, getVehicleByID, id)
 	var i Vehicle
 	err := row.Scan(
@@ -81,11 +81,11 @@ func (q *Queries) getVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, er
 	return i, err
 }
 
-const getVehicleByLicensePlate = `-- name: getVehicleByLicensePlate :one
+const getVehicleByLicensePlate = `-- name: GetVehicleByLicensePlate :one
 SELECT id, driver_id, license_plate, model, image_url, capacity, created_at, updated_at FROM vehicles WHERE license_plate = $1
 `
 
-func (q *Queries) getVehicleByLicensePlate(ctx context.Context, licensePlate string) (Vehicle, error) {
+func (q *Queries) GetVehicleByLicensePlate(ctx context.Context, licensePlate string) (Vehicle, error) {
 	row := q.db.QueryRowContext(ctx, getVehicleByLicensePlate, licensePlate)
 	var i Vehicle
 	err := row.Scan(
@@ -101,17 +101,17 @@ func (q *Queries) getVehicleByLicensePlate(ctx context.Context, licensePlate str
 	return i, err
 }
 
-const getVehiclesByDriverID = `-- name: getVehiclesByDriverID :many
+const getVehiclesByDriverID = `-- name: GetVehiclesByDriverID :many
 SELECT id, driver_id, license_plate, model, image_url, capacity, created_at, updated_at FROM vehicles WHERE driver_id = $1 ORDER BY created_at DESC LIMIT $2 OFFSET $3
 `
 
-type getVehiclesByDriverIDParams struct {
+type GetVehiclesByDriverIDParams struct {
 	DriverID uuid.UUID `json:"driver_id"`
 	Limit    int32     `json:"limit"`
 	Offset   int32     `json:"offset"`
 }
 
-func (q *Queries) getVehiclesByDriverID(ctx context.Context, arg getVehiclesByDriverIDParams) ([]Vehicle, error) {
+func (q *Queries) GetVehiclesByDriverID(ctx context.Context, arg GetVehiclesByDriverIDParams) ([]Vehicle, error) {
 	rows, err := q.db.QueryContext(ctx, getVehiclesByDriverID, arg.DriverID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
@@ -143,7 +143,7 @@ func (q *Queries) getVehiclesByDriverID(ctx context.Context, arg getVehiclesByDr
 	return items, nil
 }
 
-const updateVehicle = `-- name: updateVehicle :one
+const updateVehicle = `-- name: UpdateVehicle :one
 UPDATE vehicles
 SET 
     model = COALESCE($2, model),
@@ -154,14 +154,14 @@ WHERE id = $1
 RETURNING id, driver_id, license_plate, model, image_url, capacity, created_at, updated_at
 `
 
-type updateVehicleParams struct {
+type UpdateVehicleParams struct {
 	ID       uuid.UUID      `json:"id"`
 	Model    sql.NullString `json:"model"`
 	ImageUrl sql.NullString `json:"image_url"`
 	Capacity sql.NullInt32  `json:"capacity"`
 }
 
-func (q *Queries) updateVehicle(ctx context.Context, arg updateVehicleParams) (Vehicle, error) {
+func (q *Queries) UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (Vehicle, error) {
 	row := q.db.QueryRowContext(ctx, updateVehicle,
 		arg.ID,
 		arg.Model,

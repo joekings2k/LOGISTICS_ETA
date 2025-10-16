@@ -23,4 +23,10 @@ migratecreate:
 sqlc:
 	sqlc generate
 
-.PHONY: createdb dropdb migrateup migratedown sqlc migratecreate
+server:
+	go run $(MAIN_GO)
+
+mock:
+	mockgen -package=mockdb -destination=db/mock/store.go --build_flags=--mod=mod github.com/joekings2k/logistics-eta/db/sqlc Store
+
+.PHONY: createdb dropdb migrateup migratedown sqlc migratecreate server mock

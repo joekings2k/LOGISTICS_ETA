@@ -13,28 +13,28 @@ import (
 type Querier interface {
 	CreateRoute(ctx context.Context, arg CreateRouteParams) (Route, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
+	CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error)
 	// when the route is completed
 	DeleteRoute(ctx context.Context, id uuid.UUID) error
 	// returns the updated user
 	DeleteUser(ctx context.Context, id uuid.UUID) error
+	DeleteVehicle(ctx context.Context, id uuid.UUID) error
 	GetRouteByID(ctx context.Context, id uuid.UUID) (Route, error)
 	GetRoutesByDriverID(ctx context.Context, arg GetRoutesByDriverIDParams) ([]Route, error)
 	GetUserByEmail(ctx context.Context, email string) (User, error)
 	// returns the created user
 	GetUserByID(ctx context.Context, id uuid.UUID) (User, error)
-	ListRoutes(ctx context.Context, arg ListRoutesParams) ([]Route, error)
+	// returns the created vehicle
+	GetVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, error)
+	GetVehicleByLicensePlate(ctx context.Context, licensePlate string) (Vehicle, error)
+	GetVehiclesByDriverID(ctx context.Context, arg GetVehiclesByDriverIDParams) ([]Vehicle, error)
+	ListRoutesByDriverAndStatus(ctx context.Context, arg ListRoutesByDriverAndStatusParams) ([]Route, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
+	UpdateRouteActualDuration(ctx context.Context, arg UpdateRouteActualDurationParams) (Route, error)
 	UpdateRouteStatus(ctx context.Context, arg UpdateRouteStatusParams) (Route, error)
 	UpdateUser(ctx context.Context, arg UpdateUserParams) (User, error)
 	UpdateUserPartial(ctx context.Context, arg UpdateUserPartialParams) (User, error)
-	createVehicle(ctx context.Context, arg createVehicleParams) (Vehicle, error)
-	deleteVehicle(ctx context.Context, id uuid.UUID) error
-	// returns the created vehicle
-	getVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, error)
-	getVehicleByLicensePlate(ctx context.Context, licensePlate string) (Vehicle, error)
-	getVehiclesByDriverID(ctx context.Context, arg getVehiclesByDriverIDParams) ([]Vehicle, error)
-	updateRouteActualDuration(ctx context.Context, arg updateRouteActualDurationParams) (Route, error)
-	updateVehicle(ctx context.Context, arg updateVehicleParams) (Vehicle, error)
+	UpdateVehicle(ctx context.Context, arg UpdateVehicleParams) (Vehicle, error)
 }
 
 var _ Querier = (*Queries)(nil)

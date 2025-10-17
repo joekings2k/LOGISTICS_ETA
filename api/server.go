@@ -46,6 +46,15 @@ func (server *Server)setupRouter() {
 	userRoute := router.Group("/users")
 	userRoute.POST("/login", server.LoginUser)
 	userRoute.POST("/register", server.CreateUser)
+
+	protectedRoutes := router.Group("/")
+	protectedRoutes.Use(authMiddleware(server.tokenMaker))
+
+
+	// vehicle routes
+	vehicleRoute := protectedRoutes.Group("/vehicles")
+	vehicleRoute.POST("/create", server.CreateVehicle)
+	
 	
 	server.router = router
 	

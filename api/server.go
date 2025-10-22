@@ -54,6 +54,8 @@ func (server *Server)setupRouter() {
 	// vehicle routes
 	vehicleRoute := protectedRoutes.Group("/vehicles")
 	vehicleRoute.POST("/create", server.CreateVehicle)
+	vehicleRoute.GET("", server.GetVehiclesByDriverID)
+	vehicleRoute.GET("/:id", server.GetVehicle)
 	
 	
 	server.router = router

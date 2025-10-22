@@ -27,6 +27,7 @@ type Querier interface {
 	// returns the created vehicle
 	GetVehicleByID(ctx context.Context, id uuid.UUID) (Vehicle, error)
 	GetVehicleByLicensePlate(ctx context.Context, licensePlate string) (Vehicle, error)
+	GetVehicleWithDriver(ctx context.Context, id uuid.UUID) (GetVehicleWithDriverRow, error)
 	GetVehiclesByDriverID(ctx context.Context, arg GetVehiclesByDriverIDParams) ([]Vehicle, error)
 	ListRoutesByDriverAndStatus(ctx context.Context, arg ListRoutesByDriverAndStatusParams) ([]Route, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)

@@ -8,6 +8,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -97,6 +98,60 @@ func (q *Queries) GetVehicleByLicensePlate(ctx context.Context, licensePlate str
 		&i.Capacity,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getVehicleWithDriver = `-- name: GetVehicleWithDriver :one
+SELECT 
+    v.id AS vehicle_id,
+    v.driver_id,
+    v.license_plate,
+    v.model,
+    v.image_url,
+    v.capacity,
+    v.created_at AS vehicle_created_at,
+    v.updated_at AS vehicle_updated_at,
+    u.id AS driver_id,
+    u.name AS driver_name,
+    u.email AS driver_email,
+    u.created_at AS driver_created_at
+FROM vehicles v
+JOIN users u ON v.driver_id = u.id
+WHERE v.id = $1
+`
+
+type GetVehicleWithDriverRow struct {
+	VehicleID        uuid.UUID      `json:"vehicle_id"`
+	DriverID         uuid.UUID      `json:"driver_id"`
+	LicensePlate     string         `json:"license_plate"`
+	Model            sql.NullString `json:"model"`
+	ImageUrl         sql.NullString `json:"image_url"`
+	Capacity         sql.NullInt32  `json:"capacity"`
+	VehicleCreatedAt sql.NullTime   `json:"vehicle_created_at"`
+	VehicleUpdatedAt sql.NullTime   `json:"vehicle_updated_at"`
+	DriverID_2       uuid.UUID      `json:"driver_id_2"`
+	DriverName       string         `json:"driver_name"`
+	DriverEmail      string         `json:"driver_email"`
+	DriverCreatedAt  time.Time      `json:"driver_created_at"`
+}
+
+func (q *Queries) GetVehicleWithDriver(ctx context.Context, id uuid.UUID) (GetVehicleWithDriverRow, error) {
+	row := q.db.QueryRowContext(ctx, getVehicleWithDriver, id)
+	var i GetVehicleWithDriverRow
+	err := row.Scan(
+		&i.VehicleID,
+		&i.DriverID,
+		&i.LicensePlate,
+		&i.Model,
+		&i.ImageUrl,
+		&i.Capacity,
+		&i.VehicleCreatedAt,
+		&i.VehicleUpdatedAt,
+		&i.DriverID_2,
+		&i.DriverName,
+		&i.DriverEmail,
+		&i.DriverCreatedAt,
 	)
 	return i, err
 }

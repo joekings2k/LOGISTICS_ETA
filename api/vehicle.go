@@ -2,6 +2,8 @@ package api
 
 import (
 	"database/sql"
+	"errors"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -9,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	db "github.com/joekings2k/logistics-eta/db/sqlc"
 	"github.com/joekings2k/logistics-eta/token"
+	"github.com/joekings2k/logistics-eta/util"
 	"github.com/lib/pq"
 )
 
@@ -43,6 +46,11 @@ func (server *Server)	CreateVehicle(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
+	if user.Role != string(util.RoleDriver) {
+		err := errors.New("user is not a driver")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
 	arg:= db.CreateVehicleParams{
 		ID:uuid.New(),
 		DriverID: user.ID,
@@ -69,6 +77,7 @@ func (server *Server)	CreateVehicle(ctx *gin.Context) {
 
 }
 
+
 func newVehicleResponse (vehicle db.Vehicle) CreateVehicleResponse {
 	return CreateVehicleResponse{
 		ID: vehicle.ID,
@@ -82,3 +91,63 @@ func newVehicleResponse (vehicle db.Vehicle) CreateVehicleResponse {
 	}
 }
 
+type GetVehicleRequest struct {
+	ID string `uri:"id" binding:"required"`
+}
+func (server *Server)GetVehicle(ctx*gin.Context) {
+	var req GetVehicleRequest
+	if err := ctx.ShouldBindUri(&req); err != nil{
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	vehicleID, err := uuid.Parse(req.ID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	vehicle, err := server.store.GetVehicleByID(ctx, vehicleID)
+
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	fmt.Print(
+		"error hrer")
+	if vehicle.DriverID != authPayload.UserID {
+		err := errors.New("vehicle does not belong to user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, newVehicleResponse(vehicle))
+}
+
+
+type GetVehiclesByDriverIDParams struct {
+	PageID int32 `form:"page_id" binding:"required,min=1"`
+	PageSize int32 `form:"page_size" binding:"required,min=5,max=10"`
+}
+
+func (server *Server)GetVehiclesByDriverID(ctx*gin.Context) {
+	var req GetVehiclesByDriverIDParams
+	if err := ctx.ShouldBindQuery(&req); err != nil{
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	arg := db.GetVehiclesByDriverIDParams{
+		DriverID: authPayload.UserID,
+		Limit: req.PageSize,
+		Offset: (req.PageID - 1) * req.PageSize,
+	}
+	vehicles, err := server.store.GetVehiclesByDriverID(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, vehicles)
+}

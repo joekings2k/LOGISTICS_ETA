@@ -213,6 +213,21 @@ func (mr *MockStoreMockRecorder) GetVehicleByLicensePlate(arg0, arg1 interface{}
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVehicleByLicensePlate", reflect.TypeOf((*MockStore)(nil).GetVehicleByLicensePlate), arg0, arg1)
 }
 
+// GetVehicleWithDriver mocks base method.
+func (m *MockStore) GetVehicleWithDriver(arg0 context.Context, arg1 uuid.UUID) (db.GetVehicleWithDriverRow, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetVehicleWithDriver", arg0, arg1)
+	ret0, _ := ret[0].(db.GetVehicleWithDriverRow)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetVehicleWithDriver indicates an expected call of GetVehicleWithDriver.
+func (mr *MockStoreMockRecorder) GetVehicleWithDriver(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetVehicleWithDriver", reflect.TypeOf((*MockStore)(nil).GetVehicleWithDriver), arg0, arg1)
+}
+
 // GetVehiclesByDriverID mocks base method.
 func (m *MockStore) GetVehiclesByDriverID(arg0 context.Context, arg1 db.GetVehiclesByDriverIDParams) ([]db.Vehicle, error) {
 	m.ctrl.T.Helper()

@@ -25,3 +25,21 @@ RETURNING *;
 
 -- name: DeleteVehicle :exec
 DELETE FROM vehicles WHERE id = $1;
+
+-- name: GetVehicleWithDriver :one
+SELECT 
+    v.id AS vehicle_id,
+    v.driver_id,
+    v.license_plate,
+    v.model,
+    v.image_url,
+    v.capacity,
+    v.created_at AS vehicle_created_at,
+    v.updated_at AS vehicle_updated_at,
+    u.id AS driver_id,
+    u.name AS driver_name,
+    u.email AS driver_email,
+    u.created_at AS driver_created_at
+FROM vehicles v
+JOIN users u ON v.driver_id = u.id
+WHERE v.id = $1;

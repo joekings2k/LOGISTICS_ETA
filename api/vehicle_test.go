@@ -415,6 +415,30 @@ func TestGetVehicleByDriversID(t *testing.T) {
 				require.Equal(t, http.StatusOK, recorder.Code)
 			},
 		},
+		{
+			name: "InternalServerError",
+			params: GetVehiclesByDriverIDParams{
+			PageID: 1,
+			PageSize: 5,
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			},
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.GetVehiclesByDriverIDParams{
+					DriverID: user.ID,
+					Limit: 5,
+					Offset: 0,
+				}
+				store.EXPECT().
+					GetVehiclesByDriverID(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(vehicles, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
 	}
 	for i := range testCases{
 		tc := testCases[i]
@@ -452,4 +476,347 @@ func requireBodyMatchVehicle(t *testing.T, body *bytes.Buffer, vehicle db.Vehicl
 	require.Equal(t, vehicle.Model.String, gotVehicle.Model)
 	require.Equal(t, vehicle.ImageUrl.String, gotVehicle.ImageUrl)
 	require.Equal(t, vehicle.Capacity.Int32, gotVehicle.Capacity)
+}
+
+
+func TestUpdateVehicle(t *testing.T) {
+	user, _ := randomUser(t)
+	vehicle := RandomVehicle(t)
+	vehicle.DriverID = user.ID
+	user.Role = string(util.RoleDriver)
+	newVehicleModel := util.RandomString(6)
+	newCapacity := util.RandomInt(20,100)
+
+	testCases := [] struct{
+		name string
+		vehicleID uuid.UUID
+		body gin.H
+		setupAuth func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs func(store *mockdb.MockStore)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name: "OK",
+			vehicleID: vehicle.ID,
+			body: gin.H{
+				"model":newVehicleModel,
+				"capacity": int32(newCapacity),
+				"image_url": "newIMageurl",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.UpdateVehicleParams{
+					ID: vehicle.ID,
+					Model: sql.NullString{String: newVehicleModel, Valid: true},
+					ImageUrl: sql.NullString{String: "newIMageurl", Valid: true},
+					Capacity: sql.NullInt32{Int32: int32(newCapacity), Valid: true},
+				}
+
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(vehicle, nil)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+				requireBodyMatchVehicle(t, recorder.Body, vehicle)
+			},
+
+		},
+		{
+			name: "InternalServerError",
+			vehicleID: vehicle.ID,
+			body: gin.H{
+				"model":newVehicleModel,
+				"capacity": int32(newCapacity),
+				"image_url": "newIMageurl",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.UpdateVehicleParams{
+					ID: vehicle.ID,
+					Model: sql.NullString{String: newVehicleModel, Valid: true},
+					ImageUrl: sql.NullString{String: "newIMageurl", Valid: true},
+					Capacity: sql.NullInt32{Int32: int32(newCapacity), Valid: true},
+				}
+
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Eq(arg)).
+					Times(1).
+					Return(db.Vehicle{}, sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "UnAutorizedUser",
+			vehicleID: vehicle.ID,
+			body: gin.H{
+				"model":newVehicleModel,
+				"capacity": int32(newCapacity),
+				"image_url": "newIMageurl",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				// arg := db.UpdateVehicleParams{
+				// 	ID: uuid.New(),
+				// 	Model: sql.NullString{String: newVehicleModel, Valid: true},
+				// 	ImageUrl: sql.NullString{String: "newIMageurl", Valid: true},
+				// 	Capacity: sql.NullInt32{Int32: int32(newCapacity), Valid: true},
+				// }
+
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+
+		},
+		{
+			name: "UserNotFound",
+			vehicleID: vehicle.ID,
+			body: gin.H{
+				"model":newVehicleModel,
+				"capacity": int32(newCapacity),
+				"image_url": "newIMageurl",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(db.Vehicle{}, sql.ErrNoRows)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+
+		},
+		{
+			name: "UserInternalServerError",
+			vehicleID: vehicle.ID,
+			body: gin.H{
+				"model":newVehicleModel,
+				"capacity": int32(newCapacity),
+				"image_url": "newIMageurl",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(db.Vehicle{}, sql.ErrConnDone)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+
+		},
+		{
+			name: "InvalidPrams",
+			body: gin.H{
+				"model": "",
+				"image_url": "",
+				"capacity": "",
+			},
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				arg := db.UpdateVehicleParams{
+					ID:uuid.UUID{},
+					Model: sql.NullString{String: "", Valid: false},
+					ImageUrl: sql.NullString{String: "", Valid: false},
+					Capacity: sql.NullInt32{Int32:0, Valid: false},
+				}
+
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().
+					UpdateVehicle(gomock.Any(), gomock.Eq(arg)).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+
+		},
+	}
+
+	for i := range testCases{
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T)  {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := NewTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/vehicles/%s", vehicle.ID)
+			data, err := json.Marshal(tc.body)
+			require.NoError(t, err)
+
+			request, err := http.NewRequest(http.MethodPut, url, bytes.NewReader(data))
+			require.NoError(t, err)
+			tc.setupAuth(t, request, server.tokenMaker)
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+	}
+	
+}
+
+func TestDeleteVehicle(t *testing.T) {
+	vehicle := RandomVehicle(t)
+	user,_ := randomUser(t)
+	vehicle.DriverID = user.ID
+	user.Role = string(util.RoleDriver)
+
+	testCases := []struct{
+		name string
+		vehicleID string
+		setupAuth func(t *testing.T, request *http.Request, tokenMaker token.Maker)
+		buildStubs func(store *mockdb.MockStore)
+		checkResponse func(t *testing.T, recorder *httptest.ResponseRecorder)
+	}{
+		{
+			name:"OK",
+			vehicleID: vehicle.ID.String(),
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					DeleteVehicle(gomock.Any(), gomock.Eq(vehicle.ID)).
+					Times(1)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusOK, recorder.Code)
+			},
+		},
+		{
+			name:"InternalServerError",
+			vehicleID: vehicle.ID.String(),
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					DeleteVehicle(gomock.Any(), gomock.Eq(vehicle.ID)).
+					Times(1).Return( sql.ErrConnDone)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+		},
+		{
+			name: "UserNotFound",
+			vehicleID: vehicle.ID.String(),
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(db.Vehicle{}, sql.ErrNoRows)
+				store.EXPECT().
+					DeleteVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusNotFound, recorder.Code)
+			},
+
+		},
+		{
+			name: "UserInternalServerError",
+			vehicleID: vehicle.ID.String(),
+			
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(db.Vehicle{}, sql.ErrConnDone)
+				store.EXPECT().
+					DeleteUser(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusInternalServerError, recorder.Code)
+			},
+
+		},
+		{
+			name:"InvalidID",
+			vehicleID: "invalid-uuid",
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, user.ID, time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Any()).Times(0)
+				store.EXPECT().
+					DeleteVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusBadRequest, recorder.Code)
+			},
+		},
+		{
+			name: "UnAutorizedUser",
+			vehicleID: vehicle.ID.String(),
+			setupAuth: func(t *testing.T, request *http.Request, tokenMaker token.Maker) {
+				addAuthorization(t, request, tokenMaker, authorizationTypeBearer, uuid.New(), time.Minute)
+			} ,
+			buildStubs: func(store *mockdb.MockStore) {
+				store.EXPECT().GetVehicleByID(gomock.Any(), gomock.Eq(vehicle.ID)).Times(1).Return(vehicle, nil)
+				store.EXPECT().
+					DeleteVehicle(gomock.Any(), gomock.Any()).
+					Times(0)
+			},
+			checkResponse: func(t *testing.T, recorder *httptest.ResponseRecorder) {
+				require.Equal(t, http.StatusUnauthorized, recorder.Code)
+			},
+
+		},
+	}
+	for i := range testCases{
+		tc := testCases[i]
+		t.Run(tc.name, func(t *testing.T) {
+			ctrl := gomock.NewController(t)
+			defer ctrl.Finish()
+
+			store := mockdb.NewMockStore(ctrl)
+			tc.buildStubs(store)
+
+			server := NewTestServer(t, store)
+			recorder := httptest.NewRecorder()
+
+			url := fmt.Sprintf("/vehicles/%s", tc.vehicleID)
+			request, err := http.NewRequest(http.MethodDelete, url, nil)
+			require.NoError(t, err)
+			tc.setupAuth(t, request, server.tokenMaker)
+			server.router.ServeHTTP(recorder, request)
+			tc.checkResponse(t, recorder)
+		})
+	}
+	
 }

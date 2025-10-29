@@ -78,7 +78,7 @@ func (server *Server)	CreateVehicle(ctx *gin.Context) {
 }
 
 
-func newVehicleResponse (vehicle db.Vehicle) CreateVehicleResponse {
+func newVehicleResponse(vehicle db.Vehicle) CreateVehicleResponse {
 	return CreateVehicleResponse{
 		ID: vehicle.ID,
 		DriverID: vehicle.DriverID,
@@ -150,4 +150,110 @@ func (server *Server)GetVehiclesByDriverID(ctx*gin.Context) {
 		return
 	}
 	ctx.JSON(http.StatusOK, vehicles)
+}
+
+
+type UpdateVehicleUri struct{
+	VehicleID string `uri:"vehicle_id" binding:"required"`
+}
+type UpdateVehicleRequest struct {
+	Model string `json:"model"`
+	ImageUrl string `json:"image_url" `
+	Capacity int32 `json:"capacity"`
+}
+func (server *Server) UpdateVehicle(ctx *gin.Context) {
+
+	var req UpdateVehicleRequest
+	if err := ctx.ShouldBindJSON(&req);err != nil{
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	var uri UpdateVehicleUri
+	if err := ctx.ShouldBindUri(&uri); err != nil{
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	
+	vehicleID, err := uuid.Parse(uri.VehicleID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	vehicle, err := server.store.GetVehicleByID(ctx, vehicleID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if vehicle.DriverID != authPayload.UserID {
+		err := errors.New("vehicle does not belong to user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+
+	arg := db.UpdateVehicleParams{ID: vehicleID}
+
+	if req.Model != "" {
+		arg.Model = sql.NullString{String: req.Model, Valid: true}
+	}
+	if req.ImageUrl != "" {
+		arg.ImageUrl = sql.NullString{String: req.ImageUrl, Valid: true}
+	}
+	if req.Capacity != 0 {
+		arg.Capacity = sql.NullInt32{Int32: req.Capacity, Valid: true}
+	}
+
+
+	vehicle, err = server.store.UpdateVehicle(ctx, arg)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, newVehicleResponse(vehicle))
+
+}
+
+type DeleteVehicleUri struct {
+	VehicleID string `uri:"vehicle_id" binding:"required"`
+}
+
+func (server *Server) DeleteVehicle(ctx *gin.Context) {
+	var uri DeleteVehicleUri
+	if err := ctx.ShouldBindUri(&uri); err != nil{
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+
+	vehicleID, err := uuid.Parse(uri.VehicleID)
+	if err != nil {
+		ctx.JSON(http.StatusBadRequest, errorResponse(err))
+		return
+	}
+	authPayload := ctx.MustGet(authorizationPayloadKey).(*token.Payload)
+	vehicle, err := server.store.GetVehicleByID(ctx, vehicleID)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			ctx.JSON(http.StatusNotFound, errorResponse(err))
+			return
+		}
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	if vehicle.DriverID != authPayload.UserID {
+		err := errors.New("vehicle does not belong to user")
+		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+		return
+	}
+	err = server.store.DeleteVehicle(ctx, vehicleID)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
+		return
+	}
+	ctx.JSON(http.StatusOK, gin.H{
+		"message": "vehicle deleted successfully",
+	})
 }

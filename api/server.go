@@ -56,6 +56,8 @@ func (server *Server)setupRouter() {
 	vehicleRoute.POST("/create", server.CreateVehicle)
 	vehicleRoute.GET("", server.GetVehiclesByDriverID)
 	vehicleRoute.GET("/:id", server.GetVehicle)
+	vehicleRoute.PUT("/:vehicle_id", server.UpdateVehicle)
+	vehicleRoute.DELETE("/:vehicle_id", server.DeleteVehicle)
 	
 	
 	server.router = router

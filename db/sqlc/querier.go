@@ -11,6 +11,7 @@ import (
 )
 
 type Querier interface {
+	CompleteRoute(ctx context.Context, arg CompleteRouteParams) (Route, error)
 	CreateRoute(ctx context.Context, arg CreateRouteParams) (Route, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	CreateVehicle(ctx context.Context, arg CreateVehicleParams) (Vehicle, error)

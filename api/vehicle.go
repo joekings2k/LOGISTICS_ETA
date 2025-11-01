@@ -118,9 +118,7 @@ func (server *Server)GetVehicle(ctx*gin.Context) {
 	}
 	fmt.Print(
 		"error hrer")
-	if vehicle.DriverID != authPayload.UserID {
-		err := errors.New("vehicle does not belong to user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+	if !util.EnsureOwnership(ctx, vehicle.DriverID, authPayload.UserID) {
 		return
 	}
 	ctx.JSON(http.StatusOK, newVehicleResponse(vehicle))
@@ -189,9 +187,8 @@ func (server *Server) UpdateVehicle(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	if vehicle.DriverID != authPayload.UserID {
-		err := errors.New("vehicle does not belong to user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+
+	if !util.EnsureOwnership(ctx, vehicle.DriverID, authPayload.UserID) {
 		return
 	}
 
@@ -243,9 +240,8 @@ func (server *Server) DeleteVehicle(ctx *gin.Context) {
 		ctx.JSON(http.StatusInternalServerError, errorResponse(err))
 		return
 	}
-	if vehicle.DriverID != authPayload.UserID {
-		err := errors.New("vehicle does not belong to user")
-		ctx.JSON(http.StatusUnauthorized, errorResponse(err))
+
+	if !util.EnsureOwnership(ctx, vehicle.DriverID, authPayload.UserID) {
 		return
 	}
 	err = server.store.DeleteVehicle(ctx, vehicleID)

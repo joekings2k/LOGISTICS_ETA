@@ -11,13 +11,14 @@ INSERT INTO routes (
     destination_lng,
     estimated_distance_km,
     estimated_duration_min,
+    predicted_eta_min,
     status
 )
 VALUES (
     $1, $2, $3,
     $4, $5, $6,
     $7, $8, $9,
-    $10, $11, $12
+    $10, $11, $12, $13
 )
 RETURNING *;
 
@@ -56,4 +57,13 @@ AND status = $2
 ORDER BY created_at DESC
 LIMIT $3 OFFSET $4;
 
+
+-- name: CompleteRoute :one
+UPDATE routes
+set status = $2,
+    actual_duration_min = $3,
+    completed_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING *;
 

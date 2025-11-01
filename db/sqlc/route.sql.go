@@ -12,6 +12,49 @@ import (
 	"github.com/google/uuid"
 )
 
+const completeRoute = `-- name: CompleteRoute :one
+UPDATE routes
+set status = $2,
+    actual_duration_min = $3,
+    completed_at = NOW(),
+    updated_at = NOW()
+WHERE id = $1
+RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at
+`
+
+type CompleteRouteParams struct {
+	ID                uuid.UUID       `json:"id"`
+	Status            string          `json:"status"`
+	ActualDurationMin sql.NullFloat64 `json:"actual_duration_min"`
+}
+
+func (q *Queries) CompleteRoute(ctx context.Context, arg CompleteRouteParams) (Route, error) {
+	row := q.db.QueryRowContext(ctx, completeRoute, arg.ID, arg.Status, arg.ActualDurationMin)
+	var i Route
+	err := row.Scan(
+		&i.ID,
+		&i.DriverID,
+		&i.VehicleID,
+		&i.OriginLat,
+		&i.OriginLng,
+		&i.DestinationLat,
+		&i.DestinationLng,
+		&i.OriginAddress,
+		&i.DestinationAddress,
+		&i.EstimatedDistanceKm,
+		&i.EstimatedDurationMin,
+		&i.ActualDurationMin,
+		&i.Status,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.PredictedEtaMin,
+		&i.DistanceUnit,
+		&i.Metadata,
+		&i.CompletedAt,
+	)
+	return i, err
+}
+
 const createRoute = `-- name: CreateRoute :one
 INSERT INTO routes (
     id,
@@ -25,15 +68,16 @@ INSERT INTO routes (
     destination_lng,
     estimated_distance_km,
     estimated_duration_min,
+    predicted_eta_min,
     status
 )
 VALUES (
     $1, $2, $3,
     $4, $5, $6,
     $7, $8, $9,
-    $10, $11, $12
+    $10, $11, $12, $13
 )
-RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at
+RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at
 `
 
 type CreateRouteParams struct {
@@ -48,6 +92,7 @@ type CreateRouteParams struct {
 	DestinationLng       float64         `json:"destination_lng"`
 	EstimatedDistanceKm  sql.NullFloat64 `json:"estimated_distance_km"`
 	EstimatedDurationMin sql.NullFloat64 `json:"estimated_duration_min"`
+	PredictedEtaMin      sql.NullFloat64 `json:"predicted_eta_min"`
 	Status               string          `json:"status"`
 }
 
@@ -64,6 +109,7 @@ func (q *Queries) CreateRoute(ctx context.Context, arg CreateRouteParams) (Route
 		arg.DestinationLng,
 		arg.EstimatedDistanceKm,
 		arg.EstimatedDurationMin,
+		arg.PredictedEtaMin,
 		arg.Status,
 	)
 	var i Route
@@ -83,6 +129,10 @@ func (q *Queries) CreateRoute(ctx context.Context, arg CreateRouteParams) (Route
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PredictedEtaMin,
+		&i.DistanceUnit,
+		&i.Metadata,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -100,7 +150,7 @@ func (q *Queries) DeleteRoute(ctx context.Context, id uuid.UUID) error {
 }
 
 const getRouteByID = `-- name: GetRouteByID :one
-SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at FROM routes WHERE id = $1
+SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at FROM routes WHERE id = $1
 `
 
 func (q *Queries) GetRouteByID(ctx context.Context, id uuid.UUID) (Route, error) {
@@ -122,12 +172,16 @@ func (q *Queries) GetRouteByID(ctx context.Context, id uuid.UUID) (Route, error)
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PredictedEtaMin,
+		&i.DistanceUnit,
+		&i.Metadata,
+		&i.CompletedAt,
 	)
 	return i, err
 }
 
 const getRoutesByDriverID = `-- name: GetRoutesByDriverID :many
-SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at FROM routes
+SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at FROM routes
 WHERE driver_id = $1
 ORDER BY created_at DESC
 LIMIT $2 OFFSET $3
@@ -164,6 +218,10 @@ func (q *Queries) GetRoutesByDriverID(ctx context.Context, arg GetRoutesByDriver
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PredictedEtaMin,
+			&i.DistanceUnit,
+			&i.Metadata,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -179,7 +237,7 @@ func (q *Queries) GetRoutesByDriverID(ctx context.Context, arg GetRoutesByDriver
 }
 
 const listRoutesByDriverAndStatus = `-- name: ListRoutesByDriverAndStatus :many
-SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at FROM routes
+SELECT id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at FROM routes
 WHERE driver_id= $1
 AND status = $2
 ORDER BY created_at DESC
@@ -223,6 +281,10 @@ func (q *Queries) ListRoutesByDriverAndStatus(ctx context.Context, arg ListRoute
 			&i.Status,
 			&i.CreatedAt,
 			&i.UpdatedAt,
+			&i.PredictedEtaMin,
+			&i.DistanceUnit,
+			&i.Metadata,
+			&i.CompletedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -242,7 +304,7 @@ UPDATE routes
 SET actual_duration_min = $2,
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at
+RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at
 `
 
 type UpdateRouteActualDurationParams struct {
@@ -269,6 +331,10 @@ func (q *Queries) UpdateRouteActualDuration(ctx context.Context, arg UpdateRoute
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PredictedEtaMin,
+		&i.DistanceUnit,
+		&i.Metadata,
+		&i.CompletedAt,
 	)
 	return i, err
 }
@@ -278,7 +344,7 @@ UPDATE routes
 SET status = COALESCE($2, status),
     updated_at = NOW()
 WHERE id = $1
-RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at
+RETURNING id, driver_id, vehicle_id, origin_lat, origin_lng, destination_lat, destination_lng, origin_address, destination_address, estimated_distance_km, estimated_duration_min, actual_duration_min, status, created_at, updated_at, predicted_eta_min, distance_unit, metadata, completed_at
 `
 
 type UpdateRouteStatusParams struct {
@@ -305,6 +371,10 @@ func (q *Queries) UpdateRouteStatus(ctx context.Context, arg UpdateRouteStatusPa
 		&i.Status,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.PredictedEtaMin,
+		&i.DistanceUnit,
+		&i.Metadata,
+		&i.CompletedAt,
 	)
 	return i, err
 }

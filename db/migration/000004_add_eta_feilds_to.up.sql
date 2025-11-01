@@ -1,0 +1,5 @@
+ALTER TABLE routes
+ADD COLUMN predicted_eta_min DOUBLE PRECISION,
+ADD COLUMN distance_unit TEXT DEFAULT 'km',
+ADD COLUMN metadata JSONB DEFAULT '{}',
+ADD COLUMN completed_at TIMESTAMPTZ;

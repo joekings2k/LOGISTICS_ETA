@@ -28,6 +28,7 @@ func createRandomRoute(t  *testing.T, user *User, vehicle *Vehicle) Route {
 		EstimatedDistanceKm: sql.NullFloat64{Float64: 5.0, Valid: true},
 		EstimatedDurationMin: sql.NullFloat64{Float64: 15.0, Valid: true},
 		Status: "pending",
+		PredictedEtaMin: sql.NullFloat64{Float64: 30.0, Valid: true},
 	}
 
 	route, err := testQueries.CreateRoute(context.Background(), arg)
@@ -195,4 +196,20 @@ func TestUpdateRouteActualDuration(t *testing.T) {
 	require.Equal(t, route.DriverID, route2.DriverID)
 	require.Equal(t, route.VehicleID, route2.VehicleID)
 	require.Equal(t, newActualDuration, route2.ActualDurationMin)
+}
+
+func TestCompleteRoute(t *testing.T) {
+	user := createRandomUser(t)
+	vehicle := createRandomVehicle(t, user)
+	route := createRandomRoute(t , &user, &vehicle)
+
+	arg := CompleteRouteParams{
+		ID: route.ID,
+		Status: string(util.RouteCompleted),
+		ActualDurationMin: sql.NullFloat64{Float64: float64((20 * time.Minute).Minutes()), Valid: true},
+	}
+
+	route2, err := testQueries.CompleteRoute(context.Background(), arg)
+	require.NoError(t, err)
+	require.NotEmpty(t, route2)
 }

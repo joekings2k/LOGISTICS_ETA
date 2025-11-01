@@ -36,6 +36,21 @@ func (m *MockStore) EXPECT() *MockStoreMockRecorder {
 	return m.recorder
 }
 
+// CompleteRoute mocks base method.
+func (m *MockStore) CompleteRoute(arg0 context.Context, arg1 db.CompleteRouteParams) (db.Route, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "CompleteRoute", arg0, arg1)
+	ret0, _ := ret[0].(db.Route)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// CompleteRoute indicates an expected call of CompleteRoute.
+func (mr *MockStoreMockRecorder) CompleteRoute(arg0, arg1 interface{}) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "CompleteRoute", reflect.TypeOf((*MockStore)(nil).CompleteRoute), arg0, arg1)
+}
+
 // CreateRoute mocks base method.
 func (m *MockStore) CreateRoute(arg0 context.Context, arg1 db.CreateRouteParams) (db.Route, error) {
 	m.ctrl.T.Helper()

@@ -42,7 +42,7 @@ func (server *Server)setupRouter() {
 	router := gin.Default()
 	router.GET("/",server.checkHealth)
 
-	// user routes 
+	// user endpoints
 	userRoute := router.Group("/users")
 	userRoute.POST("/login", server.LoginUser)
 	userRoute.POST("/register", server.CreateUser)
@@ -51,7 +51,7 @@ func (server *Server)setupRouter() {
 	protectedRoutes.Use(authMiddleware(server.tokenMaker))
 
 
-	// vehicle routes
+	// vehicle endpoints
 	vehicleRoute := protectedRoutes.Group("/vehicles")
 	vehicleRoute.POST("/create", server.CreateVehicle)
 	vehicleRoute.GET("", server.GetVehiclesByDriverID)
@@ -59,6 +59,11 @@ func (server *Server)setupRouter() {
 	vehicleRoute.PUT("/:vehicle_id", server.UpdateVehicle)
 	vehicleRoute.DELETE("/:vehicle_id", server.DeleteVehicle)
 	
+	// route endpoints
+	routeRoute := protectedRoutes.Group("/routes")
+	routeRoute.POST("/create", server.CreateRoute)
+	routeRoute.GET("/:id", server.GetRoute)
+	routeRoute.GET("/:id/complete", server.CompleteRoute)
 	
 	server.router = router
 	

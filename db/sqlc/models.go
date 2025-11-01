@@ -9,24 +9,29 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/sqlc-dev/pqtype"
 )
 
 type Route struct {
-	ID                   uuid.UUID       `json:"id"`
-	DriverID             uuid.UUID       `json:"driver_id"`
-	VehicleID            uuid.UUID       `json:"vehicle_id"`
-	OriginLat            float64         `json:"origin_lat"`
-	OriginLng            float64         `json:"origin_lng"`
-	DestinationLat       float64         `json:"destination_lat"`
-	DestinationLng       float64         `json:"destination_lng"`
-	OriginAddress        sql.NullString  `json:"origin_address"`
-	DestinationAddress   sql.NullString  `json:"destination_address"`
-	EstimatedDistanceKm  sql.NullFloat64 `json:"estimated_distance_km"`
-	EstimatedDurationMin sql.NullFloat64 `json:"estimated_duration_min"`
-	ActualDurationMin    sql.NullFloat64 `json:"actual_duration_min"`
-	Status               string          `json:"status"`
-	CreatedAt            sql.NullTime    `json:"created_at"`
-	UpdatedAt            sql.NullTime    `json:"updated_at"`
+	ID                   uuid.UUID             `json:"id"`
+	DriverID             uuid.UUID             `json:"driver_id"`
+	VehicleID            uuid.UUID             `json:"vehicle_id"`
+	OriginLat            float64               `json:"origin_lat"`
+	OriginLng            float64               `json:"origin_lng"`
+	DestinationLat       float64               `json:"destination_lat"`
+	DestinationLng       float64               `json:"destination_lng"`
+	OriginAddress        sql.NullString        `json:"origin_address"`
+	DestinationAddress   sql.NullString        `json:"destination_address"`
+	EstimatedDistanceKm  sql.NullFloat64       `json:"estimated_distance_km"`
+	EstimatedDurationMin sql.NullFloat64       `json:"estimated_duration_min"`
+	ActualDurationMin    sql.NullFloat64       `json:"actual_duration_min"`
+	Status               string                `json:"status"`
+	CreatedAt            sql.NullTime          `json:"created_at"`
+	UpdatedAt            sql.NullTime          `json:"updated_at"`
+	PredictedEtaMin      sql.NullFloat64       `json:"predicted_eta_min"`
+	DistanceUnit         sql.NullString        `json:"distance_unit"`
+	Metadata             pqtype.NullRawMessage `json:"metadata"`
+	CompletedAt          sql.NullTime          `json:"completed_at"`
 }
 
 type User struct {
